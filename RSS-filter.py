@@ -229,13 +229,17 @@ def main():
         exit(0)
 
     feed_count, item_count = reader.apply_filters(filters)
-    if feed_count == 0:
-        print "No matching feeds were found."
-    else:
-        if item_count == 0:
-            print "\nNo matching items were found in {} matching feeds.".format(feed_count)
+
+    if feed_count == 1:
+        if item_count == 1:
+            print "\n1 matching item was found in 1 matching feed."
         else:
-            print "\n{} items in {} feeds were marked as read.".format(item_count, feed_count)
+            print "\n{} matching items were found in 1 matching feed.".format(item_count)
+    else:
+        if item_count == 1:
+            print "\n1 matching item was found in {} matching feeds.".format(feed_count)
+        else:
+            print "\n{} matching items were found in {} matching feeds.".format(item_count, feed_count)
 
 
 if __name__ == "__main__":
