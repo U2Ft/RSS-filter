@@ -1,19 +1,37 @@
 #!/usr/bin/env python2
 
+"""
+RSS Filter
+
+Usage:
+  RSS-filter.py
+  RSS-filter.py -e | --edit
+  RSS-filter.py -h | --help
+
+Options:
+  -h --help    Show this message.
+  -e --edit    Edit the filters with your default editor.
+"""
 
 import os
 import errno
 import stat
 from cStringIO import StringIO
+import json
+import subprocess
+import sys
 
 import libgreader
 import requests
 import configobj
 import validate
 import appdirs
+import docopt
 
 
 class GoogleReader:
+    """A partial wrapper around libgreader."""
+
     def __init__(self, client_ID, client_secret, refresh_token):
         self.client_ID = client_ID
         self.client_secret = client_secret
@@ -63,6 +81,10 @@ class GoogleReader:
     def user_info(self):
         return self.libgreader.getUserInfo()
 
+    def subscription_list(self):
+        self.libgreader.buildSubscriptionList()
+        return self.libgreader.getSubscriptionList()
+
 
 def check_config(config_dir):
     try:
@@ -80,7 +102,24 @@ def check_config(config_dir):
     valid = config.validate(validate.Validator())
 
     if valid is True:
-        return config
+        try:
+            with open(os.path.join(config_dir, "filters.json")) as filters_file:
+                try:
+                    filters = json.load(filters_file)
+                except ValueError as e:
+                    if e.message == "No JSON object could be decoded":
+                        filters = None
+                    else:
+                        filters = (False, e.message)
+            return config, filters
+        except IOError as e:
+            if e.errno == errno.ENOENT:
+                f = open(os.path.join(config_dir, "filters.json"), "w")
+                f.write("""{\n    // "feed name": ["excluded string", "another excluded string"],\n}\n""")
+                f.close()
+            else:
+                raise
+
     elif valid is False:
         config["client_ID"] = raw_input("Google OAuth Client ID\n:  ")
         config["client_secret"] = raw_input("Google OAuth Client Secret\n:  ")
@@ -97,12 +136,41 @@ def check_config(config_dir):
         exit(2)
 
 
+def open_file(path):
+    if sys.platform.startswith("darwin"):
+        subprocess.call(("open", path))
+
+    elif os.name == "nt":
+        os.startfile(path)
+
+    elif os.name == "posix":
+        try:
+            with open(os.devnull, "w") as fnull:
+                retcode = subprocess.call(("xdg-open", path), stderr=fnull)
+            if retcode != 0:
+                raise OSError
+        except OSError:
+            editor = os.environ["EDITOR"]
+            subprocess.call((editor, path))
+
+
 def main():
+    args = docopt.docopt(__doc__)
     config_dir = appdirs.user_data_dir("RSS-filter", "U2Ft")
-    config = check_config(config_dir)
+    config, filters = check_config(config_dir)
+
+    if not filters or args["--edit"]:
+        if filters is None:
+            print "No filters specified."
+        elif isinstance(filters, tuple) and filters[0] is False:
+            print "Filters file is invalid: {}\n".format(filters[1])
+
+        filters_path = os.path.join(config_dir, "filters.json")
+        print "Opening filters file (\"{}\")...".format(filters_path)
+        open_file(filters_path)
+        exit(4)
 
     reader = GoogleReader(config["client_ID"], config["client_secret"], config["refresh_token"])
-
     print reader.user_info()
 
 
