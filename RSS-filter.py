@@ -114,20 +114,21 @@ class GoogleReader:
         for feed in self.subscription_list():
             try:
                 patterns = filters[feed.title]
-
                 print "Searching \"{}\" for matching items...".format(feed.title),
                 sys.stdout.flush()
 
                 feed_count += 1
                 items = self.get_unread_items(feed)
+                n = item_count
+
                 for pattern in patterns:
                     for item in items:
                         regex = re.compile(pattern)
                         if regex.search(item.title):
-                            item.markRead()
                             item_count += 1
+                            item.markRead()
 
-                print "found {}.".format(item_count)
+                print "found {}.".format(item_count - n)
             except KeyError:
                 pass
 
@@ -229,7 +230,6 @@ def main():
         exit(0)
 
     feed_count, item_count = reader.apply_filters(filters)
-
     if feed_count == 1:
         if item_count == 1:
             print "\n1 matching item was found in 1 matching feed."
