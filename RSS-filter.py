@@ -13,17 +13,6 @@ import validate
 import appdirs
 
 
-def short_link(URL):
-    """Create an is.gd short link for the specified URL. Returns the original URL on failure."""
-    params = {"format": "json", "url": URL, "logstats": 0}
-    r = requests.get("http://is.gd/create.php", params=params)
-    if r.ok:
-        short_link = r.json["shorturl"]
-    else:
-        short_link = URL
-    return short_link
-
-
 class GoogleReader:
     def __init__(self, client_ID, client_secret, refresh_token):
         self.client_ID = client_ID
@@ -53,7 +42,12 @@ class GoogleReader:
     def get_refresh_token(self):
         auth = libgreader.OAuth2Method(self.client_ID, self.client_secret)
         auth.setRedirectUri("urn:ietf:wg:oauth:2.0:oob")
-        auth_URL = short_link(auth.buildAuthUrl())
+        auth_URL = auth.buildAuthUrl()
+
+        params = {"format": "json", "url": auth_URL, "logstats": 0}
+        r = requests.get("http://is.gd/create.php", params=params)
+        if r.ok:
+            auth_URL = r.json["shorturl"]
 
         print ("To authorize access to Google Reader, visit this URL "
                "and follow the instructions:\n\n{}\n").format(auth_URL)
