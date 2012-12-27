@@ -7,10 +7,12 @@ Usage:
   RSS-filter.py
   RSS-filter.py -e | --edit
   RSS-filter.py -h | --help
+  RSS-filter.py -l | --list
 
 Options:
   -h --help    Show this message.
   -e --edit    Edit the filters with your default editor.
+  -l --list    List feed titles.
 """
 
 import os
@@ -20,6 +22,7 @@ from cStringIO import StringIO
 import json
 import subprocess
 import sys
+import re
 
 import libgreader
 import requests
@@ -84,6 +87,51 @@ class GoogleReader:
     def subscription_list(self):
         self.libgreader.buildSubscriptionList()
         return self.libgreader.getSubscriptionList()
+
+    def list_feeds(self):
+        for feed in self.subscription_list():
+            if feed.unread < 10000:
+                yield u"({}){}{}".format(feed.unread, " " * (5 - len(str(feed.unread))), feed.title)
+            else:
+                yield u"({}) {}".format(feed.unread, feed.title)
+
+    def get_unread_items(self, feed):
+        items = []
+        while len(items) < feed.unread:
+            if items:
+                feed.loadMoreItems()
+            else:
+                feed.loadItems()
+            items = [i for i in feed.getItems() if i.isUnread()]
+
+        return items
+
+    def apply_filters(self, filters):
+        feed_count = 0
+        item_count = 0
+        self.auth.setActionToken()
+
+        for feed in self.subscription_list():
+            try:
+                patterns = filters[feed.title]
+
+                print "Searching \"{}\" for matching items...".format(feed.title),
+                sys.stdout.flush()
+
+                feed_count += 1
+                items = self.get_unread_items(feed)
+                for pattern in patterns:
+                    for item in items:
+                        regex = re.compile(pattern)
+                        if regex.search(item.title):
+                            item.markRead()
+                            item_count += 1
+
+                print "found {}.".format(item_count)
+            except KeyError:
+                pass
+
+        return feed_count, item_count
 
 
 def check_config(config_dir):
@@ -171,7 +219,23 @@ def main():
         exit(4)
 
     reader = GoogleReader(config["client_ID"], config["client_secret"], config["refresh_token"])
-    print reader.user_info()
+
+    if args["--list"]:
+        for f in reader.list_feeds():
+            try:
+                print f
+            except UnicodeEncodeError:
+                print f.encode("cp850", "backslashreplace")
+        exit(0)
+
+    feed_count, item_count = reader.apply_filters(filters)
+    if feed_count == 0:
+        print "No matching feeds were found."
+    else:
+        if item_count == 0:
+            print "\nNo matching items were found in {} matching feeds.".format(feed_count)
+        else:
+            print "\n{} items in {} feeds were marked as read.".format(item_count, feed_count)
 
 
 if __name__ == "__main__":
