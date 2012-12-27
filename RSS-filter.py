@@ -99,9 +99,9 @@ class GoogleReader:
         items = []
         while len(items) < feed.unread:
             if items:
-                feed.loadMoreItems()
+                feed.loadMoreItems(excludeRead=True)
             else:
-                feed.loadItems()
+                feed.loadItems(excludeRead=True)
             items = [i for i in feed.getItems() if i.isUnread()]
 
         return items
