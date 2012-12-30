@@ -89,11 +89,7 @@ class GoogleReader:
         return self.libgreader.getSubscriptionList()
 
     def list_feeds(self):
-        for feed in self.subscription_list():
-            if feed.unread < 10000:
-                yield u"({}){}{}".format(feed.unread, " " * (5 - len(str(feed.unread))), feed.title)
-            else:
-                yield u"({}) {}".format(feed.unread, feed.title)
+        return [(str(feed.unread), feed.title) for feed in self.subscription_list()]
 
     def get_unread_items(self, feed):
         items = []
@@ -114,6 +110,9 @@ class GoogleReader:
         for feed in self.subscription_list():
             try:
                 patterns = filters[feed.title]
+            except KeyError:
+                pass  # no filter specified for this feed
+            else:
                 print "Searching \"{}\" for matching items...".format(feed.title),
                 sys.stdout.flush()
 
@@ -122,15 +121,13 @@ class GoogleReader:
                 n = item_count
 
                 for pattern in patterns:
+                    regex = re.compile(pattern)
                     for item in items:
-                        regex = re.compile(pattern)
                         if regex.search(item.title):
                             item_count += 1
                             item.markRead()
 
                 print "found {}.".format(item_count - n)
-            except KeyError:
-                pass
 
         return feed_count, item_count
 
@@ -185,22 +182,42 @@ def check_config(config_dir):
         exit(2)
 
 
-def open_file(path):
-    if sys.platform.startswith("darwin"):
-        subprocess.call(("open", path))
+def edit_filters(filters, config_dir):
+    """open the filters file with the default editor"""
+    if filters is None:
+        print "No filters specified."
+    elif isinstance(filters, tuple) and filters[0] is False:
+        print "Filters file is invalid: {}\n".format(filters[1])
+    # else: "--edit" option was passed
 
-    elif os.name == "nt":
-        os.startfile(path)
+    filters_path = os.path.join(config_dir, "filters.json")
+    print "Opening filters file (\"{}\")...".format(filters_path)
 
-    elif os.name == "posix":
+    if sys.platform.startswith("darwin"):  # OSX
+        subprocess.call(("open", filters_path))
+    elif os.name == "nt":  # Windows
+        os.startfile(filters_path)
+    elif os.name == "posix":  # other *nix
         try:
             with open(os.devnull, "w") as fnull:
-                retcode = subprocess.call(("xdg-open", path), stderr=fnull)
+                retcode = subprocess.call(("xdg-open", filters_path), stderr=fnull)
             if retcode != 0:
                 raise OSError
         except OSError:
             editor = os.environ["EDITOR"]
-            subprocess.call((editor, path))
+            subprocess.call((editor, filters_path))
+
+
+def print_feeds_list(reader):
+    """print the user's subscribed feeds and their respective unread counts"""
+    feeds_list = reader.list_feeds()
+    col_width = max(len(feed[0]) for feed in feeds_list) + 4
+
+    for feed in feeds_list:
+        try:
+            print "".join(column.ljust(col_width) for column in feed)
+        except UnicodeEncodeError:
+            print "".join(column.ljust(col_width) for column in feed).encode("cp850", "backslashreplace")
 
 
 def main():
@@ -209,24 +226,13 @@ def main():
     config, filters = check_config(config_dir)
 
     if not filters or args["--edit"]:
-        if filters is None:
-            print "No filters specified."
-        elif isinstance(filters, tuple) and filters[0] is False:
-            print "Filters file is invalid: {}\n".format(filters[1])
-
-        filters_path = os.path.join(config_dir, "filters.json")
-        print "Opening filters file (\"{}\")...".format(filters_path)
-        open_file(filters_path)
+        edit_filters(filters, config_dir)
         exit(4)
 
     reader = GoogleReader(config["client_ID"], config["client_secret"], config["refresh_token"])
 
     if args["--list"]:
-        for f in reader.list_feeds():
-            try:
-                print f
-            except UnicodeEncodeError:
-                print f.encode("cp850", "backslashreplace")
+        print_feeds_list(reader)
         exit(0)
 
     feed_count, item_count = reader.apply_filters(filters)
