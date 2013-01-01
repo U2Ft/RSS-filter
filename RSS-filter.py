@@ -23,6 +23,7 @@ import json
 import subprocess
 import sys
 import re
+import logging
 
 import libgreader
 import requests
@@ -48,10 +49,12 @@ class GoogleReader:
         payload = {"client_id": self.client_ID, "client_secret": self.client_secret,
                    "refresh_token": self.refresh_token, "grant_type": "refresh_token"}
         r = requests.post("https://accounts.google.com/o/oauth2/token", data=payload)
+
         try:
             access_token = r.json["access_token"]
-        except KeyError as e:
-            print "\n{}\n\n{}\n\nError. Couldn't parse access token.".format(e, r.text)
+        except KeyError:
+            logging.CRITICAL("Couldn't authenticate with Google Reader.")
+            print "Error. Couldn't authenticate with Google Reader."
             exit(3)
 
         auth = libgreader.OAuth2Method(self.client_ID, self.client_secret)
@@ -224,6 +227,12 @@ def main():
     args = docopt.docopt(__doc__)
     config_dir = appdirs.user_data_dir("RSS-filter", "U2Ft")
     config, filters = check_config(config_dir)
+    logging.basicConfig(filename=os.path.join(config_dir, "RSS-filter.log"), level=logging.INFO,
+                        datefmt="%Y-%m-%d %H:%M:%S", format="%(asctime)s: %(message)s")
+
+    # silence requests.packages.urllib3's logging of every connection at level INFO
+    requests_logger = logging.getLogger("requests.packages.urllib3")
+    requests_logger.setLevel(logging.WARNING)
 
     if not filters or args["--edit"]:
         edit_filters(filters, config_dir)
@@ -238,13 +247,17 @@ def main():
     feed_count, item_count = reader.apply_filters(filters)
     if feed_count == 1:
         if item_count == 1:
+            logging.info("1 matching item was found in 1 matching feed.")
             print "\n1 matching item was found in 1 matching feed."
         else:
+            logging.info("{} matching items were found in 1 matching feed.".format(item_count))
             print "\n{} matching items were found in 1 matching feed.".format(item_count)
     else:
         if item_count == 1:
+            logging.info("1 matching item was found in {} matching feeds.".format(feed_count))
             print "\n1 matching item was found in {} matching feeds.".format(feed_count)
         else:
+            logging.info("{} matching items were found in {} matching feeds.".format(item_count, feed_count))
             print "\n{} matching items were found in {} matching feeds.".format(item_count, feed_count)
 
 
