@@ -156,10 +156,7 @@ def check_config(config_dir):
                 try:
                     filters = json.load(filters_file)
                 except ValueError as e:
-                    if e.message == "No JSON object could be decoded":
-                        filters = None
-                    else:
-                        filters = (False, e.message)
+                    filters = (False, e.message)
             return config, filters
         except IOError as e:
             if e.errno == errno.ENOENT:
@@ -234,7 +231,7 @@ def main():
     requests_logger = logging.getLogger("requests.packages.urllib3")
     requests_logger.setLevel(logging.WARNING)
 
-    if not filters or args["--edit"]:
+    if isinstance(filters, tuple) or args["--edit"]:
         edit_filters(filters, config_dir)
         exit(4)
 
