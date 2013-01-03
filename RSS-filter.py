@@ -19,7 +19,6 @@ import os
 import errno
 import stat
 from cStringIO import StringIO
-import json
 import subprocess
 import sys
 import re
@@ -31,6 +30,7 @@ import configobj
 import validate
 import appdirs
 import docopt
+import demjson
 
 
 class GoogleReader:
@@ -153,15 +153,19 @@ def check_config(config_dir):
     if valid is True:
         try:
             with open(os.path.join(config_dir, "filters.json")) as filters_file:
+                filters_json = filters_file.read()
                 try:
-                    filters = json.load(filters_file)
-                except ValueError as e:
-                    filters = (False, e.message)
+                    filters = demjson.decode(filters_json, encoding="utf8", strict=True, allow_comments=True)
+                except demjson.JSONDecodeError as e:
+                    filters = (False, e.pretty_description())
             return config, filters
         except IOError as e:
             if e.errno == errno.ENOENT:
                 f = open(os.path.join(config_dir, "filters.json"), "w")
-                f.write("""{\n    // "feed name": ["excluded string", "another excluded string"],\n}\n""")
+                f.write('{\n'
+                        '    // comment\n'
+                        '    "feed name": ["filter regexp", "another filter regexp"]\n'
+                        '}\n')
                 f.close()
             else:
                 raise
