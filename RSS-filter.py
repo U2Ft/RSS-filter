@@ -23,6 +23,7 @@ import subprocess
 import sys
 import re
 import logging
+from collections import OrderedDict
 
 import libgreader
 import requests
@@ -88,11 +89,23 @@ class GoogleReader:
         return self.libgreader.getUserInfo()
 
     def subscription_list(self):
+        """
+        Return an OrderedDict mapping categories to their contained feeds, sorted by category label and feed
+        title, respectively.
+        """
         self.libgreader.buildSubscriptionList()
-        return self.libgreader.getSubscriptionList()
+        categories = {cat: sorted(cat.getFeeds(), key=lambda f: f.title)
+                      for cat in self.libgreader.getCategories()}
+        return OrderedDict(sorted(categories.items(), key=lambda c: c[0].label))
 
-    def list_feeds(self):
-        return [(str(feed.unread), feed.title) for feed in self.subscription_list()]
+    def category_list(self):
+        """
+        Return an OrderedDict mapping category labels to a list of tuples containing the unread count and
+        title for each feed in the category. Categories and feeds are sorted alphabetically.
+        """
+        categories = self.subscription_list()
+        feeds = {cat.label: [(feed.unread, feed.title) for feed in categories[cat]] for cat in categories}
+        return OrderedDict(sorted(feeds.items()))
 
     def get_unread_items(self, feed):
         items = []
@@ -110,27 +123,44 @@ class GoogleReader:
         item_count = 0
         self.auth.setActionToken()
 
-        for feed in self.subscription_list():
-            try:
-                patterns = filters[feed.title]
-            except KeyError:
-                pass  # no filter specified for this feed
-            else:
-                print "Searching \"{}\" for matching items...".format(feed.title),
-                sys.stdout.flush()
+        filtered_feeds = set()
 
-                feed_count += 1
-                items = self.get_unread_items(feed)
-                n = item_count
+        categories = self.subscription_list()
+        print "Applying filters..."
+        for category in categories:
+            category_has_matching_feeds = False
 
-                for pattern in patterns:
-                    regex = re.compile(pattern)
-                    for item in items:
-                        if regex.search(item.title):
-                            item_count += 1
-                            item.markRead()
+            for feed in categories[category]:
+                try:
+                    patterns = filters[feed.title]
+                    if feed.id in filtered_feeds:
+                        raise ValueError
+                    else:
+                        filtered_feeds.add(feed.id)
+                except KeyError:
+                    pass  # no filter specified for this feed
+                except ValueError:
+                    pass  # this feed was in a previously-processed category
+                else:
+                    if not category_has_matching_feeds:
+                        category_has_matching_feeds = True
+                        print "\n{}\n{}".format(category.label, "=" * len(category.label))
 
-                print "found {}.".format(item_count - n)
+                    print "Searching \"{}\" for matching items...".format(feed.title),
+                    sys.stdout.flush()
+
+                    feed_count += 1
+                    items = self.get_unread_items(feed)
+                    n = item_count
+
+                    for pattern in patterns:
+                        regex = re.compile(pattern)
+                        for item in items:
+                            if regex.search(item.title):
+                                item_count += 1
+                                item.markRead()
+
+                    print "found {}.".format(item_count - n)
 
         return feed_count, item_count
 
@@ -212,16 +242,28 @@ def edit_filters(filters, config_dir):
             subprocess.call((editor, filters_path))
 
 
-def print_feeds_list(reader):
-    """print the user's subscribed feeds and their respective unread counts"""
-    feeds_list = reader.list_feeds()
-    col_width = max(len(feed[0]) for feed in feeds_list) + 4
+def list_feeds(reader):
+    """
+    Print the user's subscribed feeds and their respective unread counts,
+    separated by category name and ordered alphabetically.
+    """
+    categories = reader.category_list()
 
-    for feed in feeds_list:
+    col_width = max(len(str(unread_count)) for unread_count in
+                    [feed[0] for cat in categories for feed in categories[cat]]) + 4
+
+    for cat in categories:
         try:
-            print "".join(column.ljust(col_width) for column in feed)
+            print "\n{}\n{}".format(cat, "=" * len(cat))
         except UnicodeEncodeError:
-            print "".join(column.ljust(col_width) for column in feed).encode("cp850", "backslashreplace")
+            print "\n{}\n{}".format(cat, "=" * len(cat)).encode("cp850", "backslashreplace")
+
+        for feed in categories[cat]:
+            try:
+                print "".join(unicode(column).ljust(col_width) for column in feed)
+            except UnicodeEncodeError:
+                print "".join(unicode(column).ljust(col_width)
+                              for column in feed).encode("cp850", "backslashreplace")
 
 
 def main():
@@ -242,7 +284,7 @@ def main():
     reader = GoogleReader(config["client_ID"], config["client_secret"], config["refresh_token"])
 
     if args["--list"]:
-        print_feeds_list(reader)
+        list_feeds(reader)
         exit(0)
 
     feed_count, item_count = reader.apply_filters(filters)
