@@ -128,39 +128,43 @@ class GoogleReader:
         categories = self.subscription_list()
         print "Applying filters..."
         for category in categories:
-            category_has_matching_feeds = False
+            try:
+                category_has_matching_feeds = False
 
-            for feed in categories[category]:
-                try:
-                    patterns = filters[feed.title]
-                    if feed.id in filtered_feeds:
-                        raise ValueError
+                for feed in categories[category]:
+                    try:
+                        patterns = filters[feed.title]
+                        if feed.id in filtered_feeds:
+                            raise ValueError
+                        else:
+                            filtered_feeds.add(feed.id)
+                    except KeyError:
+                        pass  # no filter specified for this feed
+                    except ValueError:
+                        pass  # this feed was in a previously-processed category
                     else:
-                        filtered_feeds.add(feed.id)
-                except KeyError:
-                    pass  # no filter specified for this feed
-                except ValueError:
-                    pass  # this feed was in a previously-processed category
-                else:
-                    if not category_has_matching_feeds:
-                        category_has_matching_feeds = True
-                        print "\n{}\n{}".format(category.label, "=" * len(category.label))
+                        if not category_has_matching_feeds:
+                            category_has_matching_feeds = True
+                            print "\n{}\n{}".format(category.label, "=" * len(category.label))
 
-                    print "Searching \"{}\" for matching items...".format(feed.title),
-                    sys.stdout.flush()
+                        print "Searching \"{}\" for matching items...".format(feed.title),
+                        sys.stdout.flush()
 
-                    feed_count += 1
-                    items = self.get_unread_items(feed)
-                    n = item_count
+                        feed_count += 1
+                        items = self.get_unread_items(feed)
+                        n = item_count
 
-                    for pattern in patterns:
-                        regex = re.compile(pattern)
-                        for item in items:
-                            if regex.search(item.title):
-                                item_count += 1
-                                item.markRead()
+                        for pattern in patterns:
+                            regex = re.compile(pattern)
+                            for item in items:
+                                if regex.search(item.title):
+                                    item_count += 1
+                                    item.markRead()
 
-                    print "found {}.".format(item_count - n)
+                        print "found {}.".format(item_count - n)
+            except KeyboardInterrupt:
+                print "skipped."
+                # skip to next category
 
         return feed_count, item_count
 
