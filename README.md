@@ -30,7 +30,7 @@ Options:
 Specify some filters, then run manually or write a cron job--something like
 
 ```
-0 6,4 * * * /home/sam/bin/,RSS-filter > /dev/null
+0 6,4 * * * RSS-filter > /dev/null
 ```
 
 Run summaries are logged to a file in the config directory.
@@ -41,12 +41,18 @@ The filters file is JSON. Comments are allowed.
 The format is 
 ```js
 {
+    // Every feed
+    "*": ["regex"],
+
+    // Specific feeds
     "feed title": ["regex"]
 }
 ```
 
 where `regex` is a [Python Regular Expression](http://docs.python.org/2/library/re.html#regular-expression-syntax).
 Items in the named feed with titles that match the regex are marked as read.
+
+Filters for the feed title `*` are applied to every feed.
 
 Note the irregular behaviour of backslash-escapes--in practice, repeat them.
 E.g. to match a `[` in the item title, the regex should be `"\\["`.

@@ -163,6 +163,9 @@ class GoogleReader:
                 for feed in categories[category]:
                     try:
                         patterns = filters[feed.title]
+                        if u"*" in filters:
+                            patterns.extend(filters[u"*"])
+
                         if feed.id in filtered_feeds:
                             raise ValueError
                         else:
