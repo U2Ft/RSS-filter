@@ -90,22 +90,37 @@ class GoogleReader:
 
     def subscription_list(self):
         """
-        Return an OrderedDict mapping categories to their contained feeds, sorted by category label and feed
-        title, respectively.
+        Return an OrderedDict mapping tags to their contained feeds (sorted by tag label and feed
+        title, respectively). Non-tagged feeds are put in a tag called "<Untagged>" in the last position.
         """
         self.libgreader.buildSubscriptionList()
         categories = {cat: sorted(cat.getFeeds(), key=lambda f: f.title)
                       for cat in self.libgreader.getCategories()}
-        return OrderedDict(sorted(categories.items(), key=lambda c: c[0].label))
+
+        categories = sorted(categories.items(), key=lambda c: c[0].label)
+
+        feeds = [feed for feed in self.libgreader.getFeeds() if not feed.getCategories()]
+        if feeds:
+            untagged = type("Category", (), {"label": u"<Untagged>"})()
+            categories.append((untagged, feeds))
+
+        return OrderedDict(categories)
 
     def category_list(self):
         """
         Return an OrderedDict mapping category labels to a list of tuples containing the unread count and
-        title for each feed in the category. Categories and feeds are sorted alphabetically.
+        title for each feed in the category.
         """
         categories = self.subscription_list()
-        feeds = {cat.label: [(feed.unread, feed.title) for feed in categories[cat]] for cat in categories}
-        return OrderedDict(sorted(feeds.items()))
+        feeds = {cat.label: [(feed.unread, feed.title) for feed in categories[cat]] for cat in categories
+                 if cat.label != u"<Untagged>"}
+        untagged = {cat.label: [(feed.unread, feed.title) for feed in categories[cat]] for cat in categories
+                    if cat.label == u"<Untagged>"}
+
+        sorted_feeds = sorted(feeds.items())
+        sorted_feeds.extend(untagged.items())
+
+        return OrderedDict(sorted_feeds)
 
     def get_unread_items(self, feed):
         items = []
@@ -117,6 +132,20 @@ class GoogleReader:
             items = [i for i in feed.getItems() if i.isUnread()]
 
         return items
+
+    def _apply_filter(self, feed, patterns):
+        """Apply filters to a feed. Returns the number of items marked-as-read"""
+        items = self.get_unread_items(feed)
+        count = 0
+
+        for pattern in patterns:
+            regex = re.compile(pattern)
+            for item in items:
+                if regex.search(item.title):
+                    count += 1
+                    item.markRead()
+
+        return count
 
     def apply_filters(self, filters):
         feed_count = 0
@@ -151,17 +180,10 @@ class GoogleReader:
                         sys.stdout.flush()
 
                         feed_count += 1
-                        items = self.get_unread_items(feed)
-                        n = item_count
+                        items_found = self._apply_filter(feed, patterns)
+                        item_count += items_found
 
-                        for pattern in patterns:
-                            regex = re.compile(pattern)
-                            for item in items:
-                                if regex.search(item.title):
-                                    item_count += 1
-                                    item.markRead()
-
-                        print "found {}.".format(item_count - n)
+                        print "found {}.".format(items_found)
             except KeyboardInterrupt:
                 print "skipped."
                 # skip to next category
