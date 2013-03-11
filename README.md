@@ -2,6 +2,14 @@
 
 Marks-as-read Google Reader feed items that match a specified filter.
 
+## Installation
+
+```
+pip install git+git://github.com/U2Ft/RSS-filter.git
+```
+
+You'll need a [Google OAuth client ID](https://code.google.com/apis/console/b/0/?pli=1#access).
+
 ## Usage
 
 ```
