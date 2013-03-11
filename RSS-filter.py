@@ -52,9 +52,9 @@ class GoogleReader:
         r = requests.post("https://accounts.google.com/o/oauth2/token", data=payload)
 
         try:
-            access_token = r.json["access_token"]
+            access_token = r.json()["access_token"]
         except KeyError:
-            logging.CRITICAL("Couldn't authenticate with Google Reader.")
+            logging.critical("Couldn't authenticate with Google Reader.")
             print "Error. Couldn't authenticate with Google Reader."
             exit(3)
 
@@ -72,7 +72,7 @@ class GoogleReader:
         params = {"format": "json", "url": auth_URL, "logstats": 0}
         r = requests.get("http://is.gd/create.php", params=params)
         if r.ok:
-            auth_URL = r.json["shorturl"]
+            auth_URL = r.json()["shorturl"]
 
         print ("To authorize access to Google Reader, visit this URL "
                "and follow the instructions:\n\n{}\n").format(auth_URL)
@@ -83,7 +83,7 @@ class GoogleReader:
                    "redirect_uri": "urn:ietf:wg:oauth:2.0:oob", "grant_type": "authorization_code"}
         r = requests.post("https://accounts.google.com/o/oauth2/token", data=payload)
 
-        return r.json["refresh_token"]
+        return r.json()["refresh_token"]
 
     def user_info(self):
         return self.libgreader.getUserInfo()
