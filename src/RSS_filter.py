@@ -4,10 +4,10 @@
 RSS Filter
 
 Usage:
-  {0}
-  {0} -e | --edit
-  {0} -l | --list
-  {0} -h | --help
+  RSS-filter
+  RSS-filter -e | --edit
+  RSS-filter -l | --list
+  RSS-filter -h | --help
 
 Options:
   -h --help    Show this message.
@@ -297,7 +297,7 @@ def list_feeds(reader):
 
 
 def main():
-    args = docopt.docopt(__doc__.format(sys.argv[0]))
+    args = docopt.docopt(__doc__)
     config_dir = appdirs.user_data_dir("RSS-filter", "U2Ft")
     config, filters = check_config(config_dir)
     logging.basicConfig(filename=os.path.join(config_dir, "RSS-filter.log"), level=logging.INFO,

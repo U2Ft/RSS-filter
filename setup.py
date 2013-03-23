@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name="RSS_filter",
+    name="RSS-filter",
     version="0.0.1",
     package_dir={"": "src"},
     py_modules=["RSS_filter"],

@@ -16,10 +16,10 @@ You'll need a [Google OAuth client ID](https://code.google.com/apis/console/b/0/
 RSS Filter
 
 Usage:
-  RSS-filter.py
-  RSS-filter.py -e | --edit
-  RSS-filter.py -h | --help
-  RSS-filter.py -l | --list
+  RSS-filter
+  RSS-filter -e | --edit
+  RSS-filter -h | --help
+  RSS-filter -l | --list
 
 Options:
   -h --help    Show this message.

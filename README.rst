@@ -21,10 +21,10 @@ Usage
     RSS Filter
 
     Usage:
-      RSS-filter.py
-      RSS-filter.py -e | --edit
-      RSS-filter.py -h | --help
-      RSS-filter.py -l | --list
+      RSS-filter
+      RSS-filter -e | --edit
+      RSS-filter -h | --help
+      RSS-filter -l | --list
 
     Options:
       -h --help    Show this message.
