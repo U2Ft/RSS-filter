@@ -156,25 +156,26 @@ class GoogleReader:
 
         categories = self.subscription_list()
         print "Applying filters..."
+
+        try:
+            universal_patterns = filters[u"*"]
+        except KeyError:
+            universal_patterns = []
+
         for category in categories:
             try:
                 category_has_matching_feeds = False
 
                 for feed in categories[category]:
+                    patterns = universal_patterns
                     try:
-                        patterns = filters[feed.title]
-                        if u"*" in filters:
-                            patterns.extend(filters[u"*"])
-
-                        if feed.id in filtered_feeds:
-                            raise ValueError
-                        else:
-                            filtered_feeds.add(feed.id)
+                        patterns.extend(filters[feed.title])
                     except KeyError:
-                        pass  # no filter specified for this feed
-                    except ValueError:
-                        pass  # this feed was in a previously-processed category
-                    else:
+                        pass
+
+                    if not feed.id in filtered_feeds:
+                        filtered_feeds.add(feed.id)
+
                         if not category_has_matching_feeds:
                             category_has_matching_feeds = True
                             print "\n{}\n{}".format(category.label, "=" * len(category.label))
