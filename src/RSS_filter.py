@@ -155,7 +155,7 @@ class GoogleReader:
         filtered_feeds = set()
 
         categories = self.subscription_list()
-        print "Applying filters..."
+        print u"Applying filters..."
 
         try:
             universal_patterns = filters[u"*"]
@@ -178,16 +178,16 @@ class GoogleReader:
 
                         if not category_has_matching_feeds:
                             category_has_matching_feeds = True
-                            print "\n{}\n{}".format(category.label, "=" * len(category.label))
+                            print u"\n{}\n{}".format(category.label, u"=" * len(category.label))
 
-                        print "Searching \"{}\" for matching items...".format(feed.title),
+                        print u"Searching \"{}\" for matching items...".format(feed.title),
                         sys.stdout.flush()
 
                         feed_count += 1
                         items_found = self._apply_filter(feed, patterns)
                         item_count += items_found
 
-                        print "found {}.".format(items_found)
+                        print u"found {}.".format(items_found)
             except KeyboardInterrupt:
                 print "skipped."
                 # skip to next category
