@@ -1,7 +1,14 @@
 RSS Filter
 ==========
 
-Marks-as-read Google Reader feed items that match a specified filter.
+Marks-as-read Feedbin feed items that match a specified filter.
+
+Services post Google Reader
+---------------------------
+
+Currently only Feedbin is supported, since that's what I'm now using.
+However, I'm happy to add support for other services if there's any
+interest.
 
 Installation
 ------------
@@ -9,9 +16,6 @@ Installation
 ::
 
     pip install git+git://github.com/U2Ft/RSS-filter.git
-
-You'll need a `Google OAuth client
-ID <https://code.google.com/apis/console/b/0/?pli=1#access>`_.
 
 Usage
 -----
@@ -54,7 +58,7 @@ The filters file is JSON. Comments are allowed. The format is \`\`\`js {
 } \`\`\`
 
 where ``regex`` is a `Python Regular
-Expression <http://docs.python.org/2/library/re.html#regular-expression-syntax>`_.
+Expression <http://docs.python.org/2/library/re.html#regular-expression-syntax>`__.
 Items in the named feed with titles that match the regex are marked as
 read.
 

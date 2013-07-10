@@ -195,6 +195,44 @@ class GoogleReader:
         return feed_count, item_count
 
 
+class Feedbin:
+    """A partial Feedbin API client + some application specific utility functions and the filtering logic."""
+
+    API_URL = "https://api.feedbin.me/v2/{}.json"
+
+    def __init__(self, username, password):
+        self.session = requests.Session()
+        self.session.auth = (username, password)
+
+    def _subscription_list(self):
+        """
+        Return an OrderedDict mapping tags to their contained feeds (sorted by tag label and feed
+        title, respectively). Non-tagged feeds are put in a tag called "<Untagged>" in the last position.
+        """
+        raise NotImplementedError
+
+    def category_list(self):
+        """
+        Return an OrderedDict mapping category labels to a list of tuples containing the unread count and
+        title for each feed in the category.
+        """
+        raise NotImplementedError
+
+    def _get_unread_items(self, feed):
+        """
+        Return only the unread items in the given feed.
+        """
+        raise NotImplementedError
+
+    def _apply_filter(self, feed, patterns):
+        """Apply filters to a feed. Returns the number of items marked-as-read."""
+        raise NotImplementedError
+
+    def apply_filters(self, filters):
+        """Mark-as-read the items in the specified feeds matched by the specified filters."""
+        raise NotImplementedError
+
+
 def check_config(config_dir):
     try:
         os.makedirs(config_dir)
@@ -204,7 +242,7 @@ def check_config(config_dir):
         else:
             raise
 
-    spec = """client_ID = string\nclient_secret = string\nrefresh_token = string"""
+    spec = """username = string\npassword = string"""
     config_spec = configobj.ConfigObj(StringIO(spec))
     config_path = os.path.join(config_dir, "settings.ini")
     config = configobj.ConfigObj(config_path, configspec=config_spec)
@@ -231,10 +269,8 @@ def check_config(config_dir):
                 raise
 
     elif valid is False:
-        config["client_ID"] = raw_input("Google OAuth Client ID\n:  ")
-        config["client_secret"] = raw_input("Google OAuth Client Secret\n:  ")
-        GR = GoogleReader(config["client_ID"], config["client_secret"], None)
-        config["refresh_token"] = GR.get_refresh_token()
+        config["username"] = raw_input("Feedbin username\n:  ")
+        config["password"] = raw_input("Feedbin password\n:  ")
 
     try:
         config.write()
@@ -272,12 +308,12 @@ def edit_filters(filters, config_dir):
             subprocess.call((editor, filters_path))
 
 
-def list_feeds(reader):
+def list_feeds(feedbin):
     """
     Print the user's subscribed feeds and their respective unread counts,
     separated by category name and ordered alphabetically.
     """
-    categories = reader.category_list()
+    categories = feedbin.category_list()
 
     col_width = max(len(str(unread_count)) for unread_count in
                     [feed[0] for cat in categories for feed in categories[cat]]) + 4
@@ -311,13 +347,13 @@ def main():
         edit_filters(filters, config_dir)
         exit(4)
 
-    reader = GoogleReader(config["client_ID"], config["client_secret"], config["refresh_token"])
+    feedbin = Feedbin(config["username"], config["password"])
 
     if args["--list"]:
-        list_feeds(reader)
+        list_feeds(feedbin)
         exit(0)
 
-    feed_count, item_count = reader.apply_filters(filters)
+    feed_count, item_count = feedbin.apply_filters(filters)
     if feed_count == 1:
         if item_count == 1:
             logging.info("1 matching item was found in 1 matching feed.")
