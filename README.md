@@ -18,17 +18,25 @@ pip install git+git://github.com/U2Ft/RSS-filter.git
  - delete the config file with Google Reader credentials from
 
 **OSX**
-    ~/Library/Application Support/RSS-filter/settings.ini
+```
+~/Library/Application Support/RSS-filter/settings.ini
+```
 
 **Linux**
-    ~/.config/rss-filter/settings.ini
+```
+~/.config/rss-filter/settings.ini
+```
 
 **Windows**
-    %LOCALAPPDATA%\U2Ft\RSS-filter\settings.ini
+```
+%LOCALAPPDATA%\U2Ft\RSS-filter\settings.ini
+```
 
  - upgrade with `pip`
 
-    pip install --upgrade git+git://github.com/U2Ft/RSS-filter.git
+```
+pip install --upgrade git+git://github.com/U2Ft/RSS-filter.git
+```
 
  - filters will remain intact
 
