@@ -256,12 +256,33 @@ class Feedbin:
 
         return subs_list
 
+    def _count_unread(self, feed):
+        """Return the unread count for the given feed."""
+        if not self.unread:
+            self._retrieve_unread_entries()
+
+        unread_entries = [entry for entry in self.unread if entry[u"feed_id"] == feed[u"feed_id"]]
+        return len(unread_entries)
+
     def tag_list(self):
         """
         Return an OrderedDict mapping tags to a list of tuples containing the unread count and
         title for each feed in the tag.
         """
-        raise NotImplementedError
+
+        print u"Retrieving unread entries..."
+        self._retrieve_unread_entries()
+        subs_list = self._subscription_list()
+
+        feeds = {tag: [(self._count_unread(feed), feed[u"title"]) for feed in subs_list[tag]]
+                 for tag in subs_list if tag != u"<Untagged>"}
+        untagged = {tag: [(self._count_unread(feed), feed[u"title"]) for feed in subs_list[tag]]
+                    for tag in subs_list if tag == u"<Untagged>"}
+
+        sorted_feeds = sorted(feeds.items())
+        sorted_feeds.extend(untagged.items())
+
+        return OrderedDict(sorted_feeds)
 
     def _retrieve_unread_entries(self):
         """
@@ -436,18 +457,18 @@ def list_feeds(feedbin):
     Print the user's subscribed feeds and their respective unread counts,
     separated by tag name and ordered alphabetically.
     """
-    categories = feedbin.tag_list()
+    tags = feedbin.tag_list()
 
     col_width = max(len(str(unread_count)) for unread_count in
-                    [feed[0] for cat in categories for feed in categories[cat]]) + 4
+                    [feed[0] for tag in tags for feed in tags[tag]]) + 4
 
-    for cat in categories:
+    for tag in tags:
         try:
-            print "\n{}\n{}".format(cat, "=" * len(cat))
+            print "\n{}\n{}".format(tag, "=" * len(tag))
         except UnicodeEncodeError:
-            print "\n{}\n{}".format(cat, "=" * len(cat)).encode("cp850", "backslashreplace")
+            print "\n{}\n{}".format(tag, "=" * len(tag)).encode("cp850", "backslashreplace")
 
-        for feed in categories[cat]:
+        for feed in tags[tag]:
             try:
                 print "".join(unicode(column).ljust(col_width) for column in feed)
             except UnicodeEncodeError:
