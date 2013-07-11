@@ -326,37 +326,32 @@ class Feedbin:
         universal_patterns = filters.get(u"*", [])
 
         for tag in subs_list:
-            try:
-                tag_has_matching_feeds = False
-                for feed in subs_list[tag]:
-                    # get the applicable filters
-                    patterns = universal_patterns
-                    try:
-                        patterns.extend(filters[feed[u"name"]])
-                    except KeyError:
-                        pass
+            tag_has_matching_feeds = False
+            for feed in subs_list[tag]:
+                # get the applicable filters
+                patterns = universal_patterns
+                try:
+                    patterns.extend(filters[feed[u"name"]])
+                except KeyError:
+                    pass
 
-                    if not feed[u"feed_id"] in processed_feeds:
-                        processed_feeds.add(feed[u"feed_id"])
+                if not feed[u"feed_id"] in processed_feeds:
+                    processed_feeds.add(feed[u"feed_id"])
 
-                    if not patterns:
-                        # skip to next feed
-                        continue
+                if not patterns:
+                    # skip to next feed
+                    continue
 
-                    # since there are applicable patterns, the current tag has at least one matching feed
-                    if not tag_has_matching_feeds:
-                        tag_has_matching_feeds = True
-                        print u"\n{}\n{}".format(tag, u"=" * len(tag))
+                # since there are applicable patterns, the current tag has at least one matching feed
+                if not tag_has_matching_feeds:
+                    tag_has_matching_feeds = True
+                    print u"\n{}\n{}".format(tag, u"=" * len(tag))
 
-                    feed_count += 1
-                    items_found = self._apply_filter(feed, patterns)
-                    if items_found is not None:
-                        print u"found {}.".format(items_found)
-                        item_count += items_found
-
-            except KeyboardInterrupt:
-                print u"\b\bskipped."
-                # skip to next tag
+                feed_count += 1
+                items_found = self._apply_filter(feed, patterns)
+                if items_found is not None:
+                    print u"found {}.".format(items_found)
+                    item_count += items_found
 
         return feed_count, item_count
 
