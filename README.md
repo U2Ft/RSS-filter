@@ -13,6 +13,25 @@ However, I'm happy to add support for other services if there's any interest.
 pip install git+git://github.com/U2Ft/RSS-filter.git
 ```
 
+## Upgrading
+
+ - delete the config file with Google Reader credentials from
+
+**OSX**
+    ~/Library/Application Support/RSS-filter/settings.ini
+
+**Linux**
+    ~/.config/rss-filter/settings.ini
+
+**Windows**
+    %LOCALAPPDATA%\U2Ft\RSS-filter\settings.ini
+
+ - upgrade with `pip`
+
+    pip install --upgrade git+git://github.com/U2Ft/RSS-filter.git
+
+ - filters will remain intact
+
 ## Usage
 
 ```
