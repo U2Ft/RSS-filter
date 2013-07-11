@@ -196,7 +196,9 @@ class GoogleReader:
 
 
 class Feedbin:
-    """A partial Feedbin API client + some application specific utility functions and the filtering logic."""
+    """
+    A partial Feedbin API client + some application specific utility functions and the filtering logic.
+    """
 
     API_URL = "https://api.feedbin.me/v2/{}.json"
 
@@ -204,33 +206,159 @@ class Feedbin:
         self.session = requests.Session()
         self.session.auth = (username, password)
 
+    def _get(self, endpoint, params=None, JSON=True):
+        """
+        Make a GET request to the Feedbin API and return JSON.
+        """
+        r = self.session.get(self.API_URL.format(endpoint), params=params)
+        if not r.ok:
+            r.raise_for_status()
+
+        if not JSON:
+            return r
+        else:
+            return r.json()
+
+    def _mark_as_read(self, entries):
+        """
+        Mark-as-read the entries specified by ID.
+        """
+        # TODO: split entries into groups of <= 1000
+        data = {"unread_entries": entries}
+        r = self.session.delete(self.API_URL.format("unread_entries"), data=data)
+        if not r.ok:
+            r.raise_for_status()
+
     def _subscription_list(self):
         """
-        Return an OrderedDict mapping tags to their contained feeds (sorted by tag label and feed
+        Return an OrderedDict mapping tags to their contained feeds (sorted by tag name and feed
         title, respectively). Non-tagged feeds are put in a tag called "<Untagged>" in the last position.
         """
+        subs = self._get("subscriptions")
+        taggings = self._get("taggings")
+
+        subs_list = {tag: [] for tag in set(tagging[u"name"] for tagging in taggings)}
+        subs_list = OrderedDict(sorted(subs_list.items()))
+        subs_list["<Untagged>"] = []
+
+        for sub in subs:
+            found = False
+            for tagging in taggings:
+                if tagging[u"feed_id"] == sub[u"feed_id"]:
+                    subs_list[tagging[u"name"]].append(sub)
+                    found = True
+                    break
+            if not found:
+                subs_list["<Untagged>"].append(sub)
+
+        for tag in subs_list:
+            subs_list[tag] = sorted(subs_list[tag], key=lambda sub: sub[u"title"])
+
+        return subs_list
+
+    def tag_list(self):
+        """
+        Return an OrderedDict mapping tags to a list of tuples containing the unread count and
+        title for each feed in the tag.
+        """
         raise NotImplementedError
 
-    def category_list(self):
+    def _retrieve_unread_entries(self):
         """
-        Return an OrderedDict mapping category labels to a list of tuples containing the unread count and
-        title for each feed in the category.
+        Retrieve all unread entries.
         """
-        raise NotImplementedError
 
-    def _get_unread_items(self, feed):
-        """
-        Return only the unread items in the given feed.
-        """
-        raise NotImplementedError
+        r = self._get("entries", params={"read": "false"}, JSON=False)
+        entries = r.json()
+
+        while True:
+            # Feedbin returns link headers under "links", but requests expects them to be under "link"
+            r.headers["link"] = r.headers["links"]
+            if not r.links.get("next", None):
+                break
+
+            # this is easier than using the entire URL directly
+            r = self._get("entries", params=requests.utils.urlparse(r.links["next"]["url"])[4], JSON=False)
+            entries.extend(r.json())
+
+        self.unread = entries
 
     def _apply_filter(self, feed, patterns):
-        """Apply filters to a feed. Returns the number of items marked-as-read."""
-        raise NotImplementedError
+        """
+        Apply filters to a feed. Returns the number of items marked-as-read.
+        """
+
+        entries = [entry for entry in self.unread if entry[u"feed_id"] == feed[u"feed_id"]]
+        if not entries:
+            # no unread entries
+            return None
+
+        print u"Searching \"{}\" for matching items...".format(feed[u"title"]),
+        sys.stdout.flush()
+
+        to_be_read = []
+        for pattern in patterns:
+            regex = re.compile(pattern)
+            for entry in entries:
+                if regex.search(entry[u"title"]):
+                    to_be_read.append(entry[u"id"])
+
+        if to_be_read:
+            self._mark_as_read(to_be_read)
+
+        return len(to_be_read)
 
     def apply_filters(self, filters):
-        """Mark-as-read the items in the specified feeds matched by the specified filters."""
-        raise NotImplementedError
+        """
+        Mark-as-read the items in the specified feeds matched by the specified filters.
+        """
+
+        feed_count = 0
+        item_count = 0
+        processed_feeds = set()
+        subs_list = self._subscription_list()
+
+        print u"Retrieving unread items..."
+        self._retrieve_unread_entries()
+
+        print u"Applying filters..."
+
+        universal_patterns = filters.get(u"*", [])
+
+        for tag in subs_list:
+            try:
+                tag_has_matching_feeds = False
+                for feed in subs_list[tag]:
+                    # get the applicable filters
+                    patterns = universal_patterns
+                    try:
+                        patterns.extend(filters[feed[u"name"]])
+                    except KeyError:
+                        pass
+
+                    if not feed[u"feed_id"] in processed_feeds:
+                        processed_feeds.add(feed[u"feed_id"])
+
+                    if not patterns:
+                        # skip to next feed
+                        continue
+
+                    # since there are applicable patterns, the current tag has at least one matching feed
+                    if not tag_has_matching_feeds:
+                        tag_has_matching_feeds = True
+                        print u"\n{}\n{}".format(tag, u"=" * len(tag))
+
+                    feed_count += 1
+                    items_found = self._apply_filter(feed, patterns)
+                    if items_found is not None:
+                        print u"found {}.".format(items_found)
+                        item_count += items_found
+
+            except KeyboardInterrupt:
+                print u"\b\bskipped."
+                # skip to next tag
+
+        return feed_count, item_count
 
 
 def check_config(config_dir):
@@ -311,9 +439,9 @@ def edit_filters(filters, config_dir):
 def list_feeds(feedbin):
     """
     Print the user's subscribed feeds and their respective unread counts,
-    separated by category name and ordered alphabetically.
+    separated by tag name and ordered alphabetically.
     """
-    categories = feedbin.category_list()
+    categories = feedbin.tag_list()
 
     col_width = max(len(str(unread_count)) for unread_count in
                     [feed[0] for cat in categories for feed in categories[cat]]) + 4
