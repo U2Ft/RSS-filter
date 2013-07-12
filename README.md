@@ -5,7 +5,7 @@ Marks-as-read Feedbin feed items that match a specified filter.
 ## Services post Google Reader
 
 Currently only Feedbin is supported, since that's what I'm now using.
-However, I'm happy to add support for other services if there's any interest.
+However, I'm happy to add support for other services if there's any interest ([@U2Ft](https://twitter.com/U2Ft)).
 
 ## Installation
 
