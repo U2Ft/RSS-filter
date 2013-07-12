@@ -39,6 +39,7 @@ class Feedbin:
     """
 
     API_URL = "https://api.feedbin.me/v2/{}.json"
+    to_be_read = []
 
     def __init__(self, username, password):
         self.session = requests.Session()
@@ -57,13 +58,14 @@ class Feedbin:
         else:
             return r.json()
 
-    def _mark_as_read(self, entries):
+    def _mark_as_read(self):
         """
-        Mark-as-read the entries specified by ID.
+        Mark-as-read the entries with IDs listed in self.to_be_read.
         """
         # TODO: split entries into groups of <= 1000
-        data = {"unread_entries": entries}
-        r = self.session.delete(self.API_URL.format("unread_entries"), data=data)
+        r = self.session.delete(self.API_URL.format("unread_entries"),
+                                data=demjson.encode({"unread_entries": self.to_be_read}),
+                                headers={"Content-Type": "application/json; charset=utf-8"})
         if not r.ok:
             r.raise_for_status()
 
@@ -155,17 +157,15 @@ class Feedbin:
         print u"Searching \"{}\" for matching items...".format(feed[u"title"]),
         sys.stdout.flush()
 
-        to_be_read = []
+        count = len(self.to_be_read)
         for pattern in patterns:
             regex = re.compile(pattern)
             for entry in entries:
                 if regex.search(entry[u"title"]):
-                    to_be_read.append(entry[u"id"])
+                    # TODO: remove entry from entries
+                    self.to_be_read.append(entry[u"id"])
 
-        if to_be_read:
-            self._mark_as_read(to_be_read)
-
-        return len(to_be_read)
+        return len(self.to_be_read) - count
 
     def apply_filters(self, filters):
         """
@@ -188,9 +188,9 @@ class Feedbin:
             tag_has_matching_feeds = False
             for feed in subs_list[tag]:
                 # get the applicable filters
-                patterns = universal_patterns
+                patterns = universal_patterns[:]
                 try:
-                    patterns.extend(filters[feed[u"name"]])
+                    patterns.extend(filters[feed[u"title"]])
                 except KeyError:
                     pass
 
@@ -211,6 +211,9 @@ class Feedbin:
                 if items_found is not None:
                     print u"found {}.".format(items_found)
                     item_count += items_found
+
+        if self.to_be_read:
+            self._mark_as_read()
 
         return feed_count, item_count
 
