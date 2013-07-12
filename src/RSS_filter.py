@@ -175,10 +175,14 @@ class Feedbin:
         feed_count = 0
         item_count = 0
         processed_feeds = set()
-        subs_list = self._subscription_list()
 
-        print u"Retrieving unread items..."
-        self._retrieve_unread_entries()
+        try:
+            print u"Retrieving subscribed feeds..."
+            subs_list = self._subscription_list()
+            print u"Retrieving unread items..."
+            self._retrieve_unread_entries()
+        except KeyboardInterrupt:
+            exit("cancelled")
 
         print u"Applying filters..."
 
