@@ -343,20 +343,11 @@ def main():
         exit(0)
 
     feed_count, item_count = feedbin.apply_filters(filters)
-    if feed_count == 1:
-        if item_count == 1:
-            logging.info("1 matching item was found in 1 matching feed.")
-            print "\n1 matching item was found in 1 matching feed."
-        else:
-            logging.info("{} matching items were found in 1 matching feed.".format(item_count))
-            print "\n{} matching items were found in 1 matching feed.".format(item_count)
-    else:
-        if item_count == 1:
-            logging.info("1 matching item was found in {} matching feeds.".format(feed_count))
-            print "\n1 matching item was found in {} matching feeds.".format(feed_count)
-        else:
-            logging.info("{} matching items were found in {} matching feeds.".format(item_count, feed_count))
-            print "\n{} matching items were found in {} matching feeds.".format(item_count, feed_count)
+    msg = "{} matching {} was found in {} matching {}."
+    msg = msg.format(item_count, "entry" if item_count == 1 else "entries", feed_count,
+                     "feed" if feed_count == 1 else "feeds")
+    logging.info(msg)
+    print "\n{}".format(msg)
 
 
 if __name__ == "__main__":
