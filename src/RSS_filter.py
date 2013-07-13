@@ -343,8 +343,11 @@ def main():
         exit(0)
 
     feed_count, item_count = feedbin.apply_filters(filters)
-    msg = "{} matching {} was found in {} matching {}."
-    msg = msg.format(item_count, "entry" if item_count == 1 else "entries", feed_count,
+    msg = "{} matching {} {} found in {} matching {}."
+    msg = msg.format(item_count,
+                     "entry" if item_count == 1 else "entries",
+                     "was" if item_count == 1 else "were",
+                     feed_count,
                      "feed" if feed_count == 1 else "feeds")
     logging.info(msg)
     print "\n{}".format(msg)
