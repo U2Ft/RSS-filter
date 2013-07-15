@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name="RSS-filter",
-    version="2.0.1",
+    version="2.0.2",
     description="Marks-as-read Feedbin feed items that match a specified filter.",
     long_description=open(os.path.join(os.path.dirname(__file__), 'README.rst')).read(),
     url="https://github.com/U2Ft/RSS-filter",
