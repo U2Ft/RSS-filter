@@ -134,7 +134,7 @@ class Feedbin:
 
         while True:
             # Feedbin returns link headers under "links", but requests expects them to be under "link"
-            r.headers["link"] = r.headers["links"]
+            r.headers["link"] = r.headers.get("links", None)
             if not r.links.get("next", None):
                 break
 
