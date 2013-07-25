@@ -8,11 +8,13 @@ Usage:
   RSS-filter -e | --edit
   RSS-filter -l | --list
   RSS-filter -h | --help
+  RSS-filter -s | --starred
 
 Options:
-  -h --help    Show this message.
-  -e --edit    Edit the filters with your default editor.
-  -l --list    List feed titles.
+  -h --help       Show this message.
+  -e --edit       Edit the filters with your default editor.
+  -l --list       List feed titles.
+  -s --starred    Apply filters to starred entries only.
 """
 
 import os
@@ -39,7 +41,7 @@ class Feedbin:
     """
 
     API_URL = "https://api.feedbin.me/v2/{}.json"
-    to_be_read = []
+    to_be_filtered = []
 
     def __init__(self, username, password):
         self.session = requests.Session()
@@ -58,13 +60,14 @@ class Feedbin:
         else:
             return r.json()
 
-    def _mark_as_read(self):
+    def _filter(self, starred):
         """
-        Mark-as-read the entries with IDs listed in self.to_be_read.
+        Mark-as-read or unstar the entries with IDs listed in self.to_be_filtered.
         """
+        endpoint = "starred_entries" if starred else "unread_entries"
         # TODO: split entries into groups of <= 1000
-        r = self.session.delete(self.API_URL.format("unread_entries"),
-                                data=demjson.encode({"unread_entries": self.to_be_read}),
+        r = self.session.delete(self.API_URL.format(endpoint),
+                                data=demjson.encode({endpoint: self.to_be_filtered}),
                                 headers={"Content-Type": "application/json; charset=utf-8"})
         if not r.ok:
             r.raise_for_status()
@@ -124,12 +127,16 @@ class Feedbin:
 
         return OrderedDict(sorted_feeds)
 
-    def _retrieve_unread_entries(self):
+    def _retrieve_entries(self, starred):
         """
-        Retrieve all unread entries.
+        Retrieve all unread or starred entries.
         """
 
-        r = self._get("entries", params={"read": "false"}, JSON=False)
+        if starred:
+            r = self._get("entries", params={"starred": "true"}, JSON=False)
+        else:
+            r = self._get("entries", params={"read": "false"}, JSON=False)
+
         entries = r.json()
 
         while True:
@@ -142,14 +149,14 @@ class Feedbin:
             r = self._get("entries", params=requests.utils.urlparse(r.links["next"]["url"])[4], JSON=False)
             entries.extend(r.json())
 
-        self.unread = entries
+        self.entries = entries
 
     def _apply_filter(self, feed, patterns):
         """
-        Apply filters to a feed. Returns the number of items marked-as-read.
+        Apply filters to a feed. Returns the number of items found.
         """
 
-        entries = [entry for entry in self.unread if entry[u"feed_id"] == feed[u"feed_id"]]
+        entries = [entry for entry in self.entries if entry[u"feed_id"] == feed[u"feed_id"]]
         if not entries:
             # no unread entries
             return None
@@ -157,19 +164,19 @@ class Feedbin:
         print u"Searching \"{}\" for matching items...".format(feed[u"title"]),
         sys.stdout.flush()
 
-        count = len(self.to_be_read)
+        count = len(self.to_be_filtered)
         for pattern in patterns:
             regex = re.compile(pattern)
             for entry in entries:
                 if regex.search(entry[u"title"]):
                     # TODO: remove entry from entries
-                    self.to_be_read.append(entry[u"id"])
+                    self.to_be_filtered.append(entry[u"id"])
 
-        return len(self.to_be_read) - count
+        return len(self.to_be_filtered) - count
 
-    def apply_filters(self, filters):
+    def apply_filters(self, filters, starred):
         """
-        Mark-as-read the items in the specified feeds matched by the specified filters.
+        Mark-as-read or unstar the items in the specified feeds matched by the specified filters.
         """
 
         feed_count = 0
@@ -179,8 +186,11 @@ class Feedbin:
         try:
             print u"Retrieving subscribed feeds..."
             subs_list = self._subscription_list()
-            print u"Retrieving unread items..."
-            self._retrieve_unread_entries()
+            if "starred":
+                print u"Retrieving starred items..."
+            else:
+                print u"Retrieving unread items..."
+            self._retrieve_entries(starred)
         except KeyboardInterrupt:
             exit("cancelled")
 
@@ -216,8 +226,8 @@ class Feedbin:
                     print u"found {}.".format(items_found)
                     item_count += items_found
 
-        if self.to_be_read:
-            self._mark_as_read()
+        if self.to_be_filtered:
+            self._filter(starred)
 
         return feed_count, item_count
 
@@ -342,7 +352,7 @@ def main():
         list_feeds(feedbin)
         exit(0)
 
-    feed_count, item_count = feedbin.apply_filters(filters)
+    feed_count, item_count = feedbin.apply_filters(filters, args["--starred"])
     msg = "{} matching {} {} found in {} matching {}."
     msg = msg.format(item_count,
                      "entry" if item_count == 1 else "entries",
