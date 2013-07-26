@@ -186,7 +186,7 @@ class Feedbin:
         try:
             print u"Retrieving subscribed feeds..."
             subs_list = self._subscription_list()
-            if "starred":
+            if starred:
                 print u"Retrieving starred items..."
             else:
                 print u"Retrieving unread items..."
