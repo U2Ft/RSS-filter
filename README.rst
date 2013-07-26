@@ -48,11 +48,13 @@ Usage
       RSS-filter -e | --edit
       RSS-filter -h | --help
       RSS-filter -l | --list
+      RSS-filter -s | --starred
 
     Options:
-      -h --help    Show this message.
-      -e --edit    Edit the filters with your default editor.
-      -l --list    List feed titles.
+      -h --help       Show this message.
+      -e --edit       Edit the filters with your default editor.
+      -l --list       List feed titles.
+      -s --starred    Apply filters to starred entries only.
 
 Specify some filters, then run manually or write a cron job--something
 like
