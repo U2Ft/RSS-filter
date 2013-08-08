@@ -168,6 +168,9 @@ class Feedbin:
         for pattern in patterns:
             regex = re.compile(pattern)
             for entry in entries:
+                if not entry[u"title"]:
+                    # Untitled entries are both valid and extant
+                    continue
                 if regex.search(entry[u"title"]):
                     # TODO: remove entry from entries
                     self.to_be_filtered.append(entry[u"id"])
