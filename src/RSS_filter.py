@@ -101,10 +101,10 @@ class Feedbin:
 
     def _count_unread(self, feed):
         """Return the unread count for the given feed."""
-        if not self.unread:
-            self._retrieve_unread_entries()
+        if not self.entries:
+            self._retrieve_entries(starred=False)
 
-        unread_entries = [entry for entry in self.unread if entry[u"feed_id"] == feed[u"feed_id"]]
+        unread_entries = [entry for entry in self.entries if entry[u"feed_id"] == feed[u"feed_id"]]
         return len(unread_entries)
 
     def tag_list(self):
@@ -114,7 +114,7 @@ class Feedbin:
         """
 
         print u"Retrieving unread entries..."
-        self._retrieve_unread_entries()
+        self._retrieve_entries(starred=False)
         subs_list = self._subscription_list()
 
         feeds = {tag: [(self._count_unread(feed), feed[u"title"]) for feed in subs_list[tag]]
