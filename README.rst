@@ -38,7 +38,7 @@ Usage
       -l --list       List feed titles.
       -s --starred    Apply filters to starred entries only.
 
-Specify some filters, then run manually or write a cron job--something
+Specify some filters, then run manually or write a cron job—something
 like
 
 ::
@@ -67,7 +67,7 @@ read.
 
 Filters for the feed title ``*`` are applied to every feed.
 
-Note the irregular behaviour of backslash-escapes--in practice, repeat
+Note the irregular behaviour of backslash-escapes—in practice, repeat
 them. E.g. to match a ``[`` in the item title, the regex should be
 ``"\\["``.
 

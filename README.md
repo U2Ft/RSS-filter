@@ -33,7 +33,7 @@ Options:
   -s --starred    Apply filters to starred entries only.
 ```
 
-Specify some filters, then run manually or write a cron job--something like
+Specify some filters, then run manually or write a cron job—something like
 
 ```
 0 6,4 * * * RSS-filter > /dev/null
@@ -60,7 +60,7 @@ Items in the named feed with titles that match the regex are marked as read.
 
 Filters for the feed title `*` are applied to every feed.
 
-Note the irregular behaviour of backslash-escapes--in practice, repeat them.
+Note the irregular behaviour of backslash-escapes—in practice, repeat them.
 E.g. to match a `[` in the item title, the regex should be `"\\["`.
 
 Watch out for HTML entities (e.g. `&amp;`) in item and feed titles. If a regex that should be matching isn't, that's probably why.
