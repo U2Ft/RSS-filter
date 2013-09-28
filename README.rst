@@ -1,14 +1,15 @@
 RSS Filter
 ==========
 
-Marks-as-read Feedbin feed items that match a specified filter.
+Marks-as-read feed entries that match a specified filter.
 
-Services post Google Reader
----------------------------
+Services supported
+------------------
 
-Currently only Feedbin is supported, since that's what I'm now using.
-However, I'm happy to add support for other services if there's any
-interest (`@U2Ft <https://twitter.com/U2Ft>`__).
+-  `Feedbin <https://feedbin.me/>`__
+
+Is the service you use not supported? Open an
+`issue <https://github.com/U2Ft/RSS-filter/issues/new>`__.
 
 Installation
 ------------
@@ -16,25 +17,6 @@ Installation
 ::
 
     pip install git+git://github.com/U2Ft/RSS-filter.git
-
-Upgrading
----------
-
--  delete the config file with Google Reader credentials from
-
-**OSX** ``~/Library/Application Support/RSS-filter/settings.ini``
-
-**Linux** ``~/.config/rss-filter/settings.ini``
-
-**Windows** ``%LOCALAPPDATA%\U2Ft\RSS-filter\settings.ini``
-
--  upgrade with ``pip``
-
-::
-
-    pip install --upgrade git+git://github.com/U2Ft/RSS-filter.git
-
--  filters will remain intact
 
 Usage
 -----
